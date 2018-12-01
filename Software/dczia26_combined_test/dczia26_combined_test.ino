@@ -1,12 +1,22 @@
 // dczia 2018 proto dos test firmware
 // combines all major hardware aspects (led, oled, keypad, ble)
 
+
+
 // split into functional regions
 #include "dczia26_keypad.h"
 #include "dczia26_led.h"
 #include "dczia26_oled.h"
 #include "dczia26_ble.h"
 #include "dczia26_menu.h"
+
+
+
+//for disabling brownout detection -@ReanimationXP
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
+
 
 // Global variables
 // initilized in "setup()"
@@ -16,13 +26,19 @@ Keypad             *keys = NULL; // currently customized and included within pro
 Adafruit_NeoPixel  *leds = NULL; // uses v1.xx from "Adafruit NeoPixel" (https://github.com/adafruit/Adafruit_NeoMatrix)
 
 // in arduino world, "setup()" is called once at power-up (or reset) ... 
-void setup(void)
+void setup()
 {
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector -@ReanimationXP
+  
   // init system debug output
-  Serial.begin(115200);
+ Serial.begin(115200);
 
   // call constructors
-  Serial.print("Constructing...");
+  Serial.println("Constructing...");
+  Serial.print("SDA = ");
+  Serial.println(SDA);
+  Serial.print("SCL = ");
+  Serial.println(SCL);
   keys = keypad_setup();
   delay(1);
   leds = led_setup(1);
@@ -40,7 +56,7 @@ void setup(void)
 
 // in arduino world, "loop()" is called over and over and over and ... 
 // you get the idea... we don't need to "while(1)" ourselves...
-void loop(void)
+void loop()
 {
   // main menu itself is non-blocking;
   // if no keys are pressed, function returns so that 
@@ -52,5 +68,6 @@ void loop(void)
   // advance color cycling by one iteration
   delay(1);
   if (leds) led_loop_advance(leds);
-}
 
+  //Serial.print("loop finish "); Serial.println(millis());
+}

@@ -25,8 +25,12 @@ SSD1306* oled_setup(void)
  // SH1106 display(0x3c, D3, D5);
 
   SSD1306* screen = NULL;
-
-  screen = new SSD1306(0x3c, 5, 4);
+  
+  //screen = new SSD1306(0x3c, 5, 4);
+  
+  screen = new SSD1306(0x3c, SDA, SCL, GEOMETRY_128_32);  // address, sda(21), scl(22), OLEDISPLAY_GEOMETRY (GEOMETRY_128_32 or GEOMETRY_128_64. 128x64 is default if omitted).
+                                                          // this is undocumented functionality. requires thingpulse version 3.2.7 as well. -@ReanimationXP 
+  //screen->setGeometry(GEOMETRY_128_32);                 // this doesn't work bc the damn thing's protected.
   screen->init();
   screen->flipScreenVertically();
   screen->setContrast(255);
@@ -71,18 +75,20 @@ void oled_welcome(SSD1306 *screen)
   delay(250);
 }
 
+#define DISPLAY_WIDTH 128
+#define DISPLAY_HEIGHT 32
 
 // Adapted from Adafruit_SSD1306
 void oled_drawLines(SSD1306 *screen) {
   for (int16_t i=0; i<DISPLAY_WIDTH; i+=4) {
     screen->drawLine(0, 0, i, DISPLAY_HEIGHT-1);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   for (int16_t i=0; i<DISPLAY_HEIGHT; i+=4) {
     screen->drawLine(0, 0, DISPLAY_WIDTH-1, i);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   delay(250);
 
@@ -90,12 +96,12 @@ void oled_drawLines(SSD1306 *screen) {
   for (int16_t i=0; i<DISPLAY_WIDTH; i+=4) {
     screen->drawLine(0, DISPLAY_HEIGHT-1, i, 0);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   for (int16_t i=DISPLAY_HEIGHT-1; i>=0; i-=4) {
     screen->drawLine(0, DISPLAY_HEIGHT-1, DISPLAY_WIDTH-1, i);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   delay(250);
 
@@ -103,24 +109,24 @@ void oled_drawLines(SSD1306 *screen) {
   for (int16_t i=DISPLAY_WIDTH-1; i>=0; i-=4) {
     screen->drawLine(DISPLAY_WIDTH-1, DISPLAY_HEIGHT-1, i, 0);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   for (int16_t i=DISPLAY_HEIGHT-1; i>=0; i-=4) {
     screen->drawLine(DISPLAY_WIDTH-1, DISPLAY_HEIGHT-1, 0, i);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   delay(250);
   screen->clear();
   for (int16_t i=0; i<DISPLAY_HEIGHT; i+=4) {
     screen->drawLine(DISPLAY_WIDTH-1, 0, 0, i);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   for (int16_t i=0; i<DISPLAY_WIDTH; i+=4) {
     screen->drawLine(DISPLAY_WIDTH-1, 0, i, DISPLAY_HEIGHT-1);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   delay(250);
 }
@@ -130,7 +136,7 @@ void oled_drawRect(SSD1306 *screen) {
   for (int16_t i=0; i<DISPLAY_HEIGHT/2; i+=2) {
     screen->drawRect(i, i, DISPLAY_WIDTH-2*i, DISPLAY_HEIGHT-2*i);
     screen->display();
-    delay(10);
+    //delay(10);
   }
 }
 
@@ -141,14 +147,14 @@ void oled_drawZia(SSD1306 *screen) {
     screen->clear();
     screen->drawFastImage(i, 0, 64, 64, zia);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   
   for (int16_t i=0; i<DISPLAY_WIDTH-DISPLAY_HEIGHT; ++i) {
     screen->clear();
     screen->drawFastImage(DISPLAY_WIDTH-DISPLAY_HEIGHT-i, 0, 64, 64, zia);
     screen->display();
-    delay(10);
+    //delay(10);
   }
 }
 
@@ -159,7 +165,7 @@ void oled_fillRect(SSD1306 *screen) {
     screen->setColor((color % 2 == 0) ? BLACK : WHITE); // alternate colors
     screen->fillRect(i, i, DISPLAY_WIDTH - i*2, DISPLAY_HEIGHT - i*2);
     screen->display();
-    delay(10);
+    //delay(10);
     color++;
   }
   // Reset back to WHITE
@@ -174,7 +180,7 @@ void oled_drawCircle(SSD1306 *screen) {
   for (int16_t i=0; i<DISPLAY_HEIGHT; i+=2) {
     screen->drawCircle(DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2, i);
     screen->display();
-    delay(10);
+    //delay(10);
   }
   delay(1000);
   screen->clear();
@@ -197,4 +203,3 @@ void oled_drawCircle(SSD1306 *screen) {
   screen->drawCircleQuads(DISPLAY_WIDTH/2, DISPLAY_HEIGHT/2, DISPLAY_HEIGHT/4, 0b00001111);
   screen->display();
 }
-

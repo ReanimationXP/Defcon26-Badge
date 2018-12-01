@@ -50,9 +50,10 @@ void setBeacon() {
 }
 
 void ble_setup() {
-  Serial.begin(115200);
+  //Serial.begin(115200); -@ReanimationXP, don't do this twice.
   gettimeofday(&now, NULL);
 
+  Serial.println("BLE init ");
   Serial.printf("start ESP32 %d\n",bootcount++);
 
   Serial.printf("deep sleep (%lds since last reset, %lds since last boot)\n",now.tv_sec,now.tv_sec-last);

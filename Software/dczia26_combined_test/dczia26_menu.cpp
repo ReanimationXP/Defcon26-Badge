@@ -15,18 +15,21 @@ void main_menu(SSD1306 *screen, Keypad *keypd, Adafruit_NeoPixel *ledstrip)
     screen->setFont(ArialMT_Plain_10);
     screen->setTextAlignment(TEXT_ALIGN_LEFT);
     screen->clear();
-    screen->println("dczia 2018 proto dos menu");
-    screen->println("2) led test");
-    screen->println("3) screen test");
-    screen->println("A) keypad test");
-    screen->println("");
+    screen->drawString(0, 0, "dczia final hw test menu");
+           //screen->println("dczia 2018 proto dos menu");
+    screen->drawString(0, 7, "2) led test");
+           //screen->println("2) led test");
+    screen->drawString(0, 14, "3) screen test");
+            //screen->println("3) screen test");
+    screen->drawString(0, 21, "A) keypad test");
+            //screen->println("A) keypad test");
 
     /* ***********
     screen->println("add your menu choice here");
     *********** */
 
     // Draw it to the internal screen buffer
-    screen->drawLogBuffer(0, 0);
+    // screen->drawLogBuffer(0, 0);  //only needed for println's
     // Display it on the screen
     screen->display();
   }
@@ -38,7 +41,12 @@ void main_menu(SSD1306 *screen, Keypad *keypd, Adafruit_NeoPixel *ledstrip)
   {
     //keypress = keypd->waitForKey(); // blocking
     keypress = keypd->getKey(); // non-blocking
-    if (keypress == NO_KEY) return;
+      if (keypress == NO_KEY){
+        return;
+      }
+      else{
+        //Serial.print("key>"); Serial.println(keypress);
+      }
   }
   
   switch (keypress)
@@ -137,7 +145,7 @@ void main_menu(SSD1306 *screen, Keypad *keypd, Adafruit_NeoPixel *ledstrip)
           {
             screen->clear();
             screen->setTextAlignment(TEXT_ALIGN_LEFT);
-            screen->setFont(ArialMT_Plain_16);
+            screen->setFont(ArialMT_Plain_10);
           }
       
           keypd->getKeys();
@@ -147,7 +155,6 @@ void main_menu(SSD1306 *screen, Keypad *keypd, Adafruit_NeoPixel *ledstrip)
           outstr += keypd->getState(KEY_R0C1);
           outstr += keypd->getState(KEY_R0C2);
           outstr += keypd->getState(KEY_R0C3);
-          outstr += "    'D' to exit";
           //Serial.println(outstr);
           if (screen) screen->drawString(0, 0, outstr);
       
@@ -157,24 +164,27 @@ void main_menu(SSD1306 *screen, Keypad *keypd, Adafruit_NeoPixel *ledstrip)
           outstr += keypd->getState(KEY_R1C2);
           outstr += keypd->getState(KEY_R1C3);
           //Serial.println(outstr);
-          if (screen) screen->drawString(0, 16, outstr);
+          if (screen) screen->drawString(0, 7, outstr);
       
           // Row 2
           outstr  = keypd->getState(KEY_R2C0);
           outstr += keypd->getState(KEY_R2C1);
           outstr += keypd->getState(KEY_R2C2);
           outstr += keypd->getState(KEY_R2C3);
+          outstr += "       'D' to exit";
+          
           //Serial.println(outstr);
-          if (screen) screen->drawString(0, 32, outstr);
+          if (screen) screen->drawString(0, 14, outstr);
       
           // Row 3
           outstr  = keypd->getState(KEY_R3C0);
           outstr += keypd->getState(KEY_R3C1);
           outstr += keypd->getState(KEY_R3C2);
           outstr += keypd->getState(KEY_R3C3);
+                              
           // Serial.println(outstr);
-          if (screen) screen->drawString(0, 48, outstr);
-      
+          if (screen) screen->drawString(0, 21, outstr);
+         
           // finally, update screen with new contents
           if (screen) screen->display();
           delay(1);
@@ -221,13 +231,13 @@ void main_menu(SSD1306 *screen, Keypad *keypd, Adafruit_NeoPixel *ledstrip)
 
     default:
     {
-//      Serial.print("main_menu(): case default: "); Serial.println(keypress);
-//      if (screen)
-//      {
-//        screen->println(keypress);    // Print to the screen
-//        screen->drawLogBuffer(0, 0);  // Draw it to the internal screen buffer
-//        screen->display();            // Display it on the screen
-//      }
+      //      Serial.print("main_menu(): case default: "); Serial.println(keypress);
+      //      if (screen)
+      //      {
+      //        screen->println(keypress);    // Print to the screen
+      //        screen->drawLogBuffer(0, 0);  // Draw it to the internal screen buffer
+      //        screen->display();            // Display it on the screen
+      //      }
       break;
     }
   }
@@ -265,4 +275,3 @@ void set_led_from_keystate(Keypad *keypd, char key, Adafruit_NeoPixel *ledstrip,
     }
   }
 }
-

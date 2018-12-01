@@ -12,8 +12,8 @@ char hexaKeys[ROWS][COLS] = {
   {KEY_R2C0, KEY_R2C1, KEY_R2C2, KEY_R2C3},
   {KEY_R3C0, KEY_R3C1, KEY_R3C2, KEY_R3C3}
 };
-byte rowPins[ROWS] = {16,  0,  2, 25}; //connect to the row pinouts of the keypad
-byte colPins[COLS] = {14, 12, 13, 15}; //connect to the column pinouts of the keypad
+byte rowPins[ROWS] = {17,  16,  4, 2}; //connect to the row pinouts of the keypad
+byte colPins[COLS] = {32, 33, 25, 26}; //connect to the column pinouts of the keypad
 
 
 Keypad* keypad_setup(void)
@@ -23,5 +23,3 @@ Keypad* keypad_setup(void)
   keypd = new Keypad( makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
   return(keypd);
 }
-
-
