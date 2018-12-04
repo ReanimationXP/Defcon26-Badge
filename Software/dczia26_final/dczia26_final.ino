@@ -2,41 +2,26 @@
 // combines all major hardware aspects (led, oled, keypad, ble)
 
 // split into functional regions
-#include "dczia26.h"
 #include "dczia26_keypad.h"
 #include "dczia26_led.h"
 #include "dczia26_oled.h"
 #include "dczia26_ble.h"
+#include "dczia26_menu.h"
 #include "dczia26_sd.h"
 
-#define COLOR_GREEN HslColor(120.0 / 360.0, 1.0, 0.5)
-#define COLOR_BLUE HslColor(240.0 / 360.0, 1.0, 0.05)
-
 // Global variables
+// initilized in "setup()"
+// used in "loop()"
 Adafruit_SSD1306   *oled = NULL; // uses v3.xx from "esp8266 and esp32 oled driver for ssd1306 display" (https://github.com/ThingPulse/esp8266-oled-ssd1306)
 Keypad             *keys = NULL; // currently customized and included within project (will update to forked lib later)
-hw_timer_t         *timer = NULL;
 
-volatile char lastKey = NO_KEY;
-
-char getLastKey(void);
-void displayUpdate(std::string message);
-void runDefaultAnimations(void);
-
-void IRAM_ATTR onTimer() {
-  char tempKey = keys->getKey();
-  if(tempKey != NO_KEY){
-    lastKey = tempKey;
-  }
-}
-
-// Setup the board
+// in arduino world, "setup()" is called once at power-up (or reset) ...
 void setup(void) {
   // init system debug output
   Serial.begin(115200);
 
-  // Call class constructors
-  Serial.println("Constructing...");
+  // call constructors
+  Serial.print("Constructing...");
   keys = keypad_setup();
   delay(1);
 
@@ -45,18 +30,13 @@ void setup(void) {
   strip.Show();
   startupAnimation();
   strip.Show();
+  // animations.StopAnimation(0);
 
-  // Setup the key scan interrupt
-  timer = timerBegin(0, 80, true);
-  timerAttachInterrupt(timer, &onTimer, true);
-  timerAlarmWrite(timer, 10000, true);
-  timerAlarmEnable(timer);
 
   // Setup the OLED
   oled = oled_setup();
 
   // Setup the bluetooth
-  // COMMENT THIS OUT if your board gets stuck in a bootloop, or add a 100uF capacitor to C21 (boards sold on Tindie alreay have this fix)
   ble_setup();
 
   // call welcome screen (once)
@@ -65,11 +45,15 @@ void setup(void) {
   // Set a random seed
   SetRandomSeed();
 
-  // Detect and setup a SD card
   SDSetup(oled);
 
   // done with init fuction
   Serial.println("Done With Setup!");
+}
+
+// Maps a pixel location to a pixel value
+uint ijtop(uint const & i, uint const & j) {
+  return (j - 1) + (i - 1) * 4;
 }
 
 // in arduino world, "loop()" is called over and over and over and ...
@@ -77,63 +61,120 @@ void setup(void) {
 void loop(void) {
 
   // Store what mode we're currently in
-  static char mode = '1';
-  static char oldMode = '1';
+  static auto mode = '1';
 
-  // Determine if we've changed the mode.  Use this to initialize the animations
-  static boolean newmode = true;
+  // Determine if we've changed the mode.  Use this to initialize
+  // the animations
+  static auto newmode = true;
 
-  // Is menu mode selected?
-  if (keys->getState('D') == HOLD) {
-      // User wants to select a new mode, jump to menu mode
+  // Determine if we have a new keypress
+  static auto newpress = true;
+
+  // Last key pressed
+  static auto key = '1';
+  static auto key_i = uint(1);
+  static auto key_j = uint(1);
+
+  // Grab the current keypress.  If there is none, it will be
+  // NO_KEY.
+  auto keypress = keys->getKey(); // non-blocking
+
+  // If we have a keypress, deal with the command
+  if (keypress != NO_KEY) {
+    // Denote that a new key was pressed
+    newpress = true;
+
+    // If we're in menu mode, then the next keypress determines
+    // the new mode
+    if (mode == 'D') {
+      mode = keypress;
+      newmode = true;
+
+      // If we're not in menu mode, but we press the menu button,
+      // D, then move us into menu mode
+    } else if (keypress == 'D') {
       mode = 'D';
-  }
+      newmode = true;
+    }
 
-  if(oldMode != mode){
-    Serial.printf("Mode is %c (%d)\r\n", mode, mode);
-    oldMode = mode;
+    // Convert the keypress into a coordinate (key_i,key_j) where
+    // key_i denotes the row and key_j denotes the column.  The
+    // upper left corner has coordinate (1,1).
+    key = keypress;
+    if (keypress == '1') {
+      key_i = 1; key_j = 1;
+    } else if (keypress == '2') {
+      key_i = 1; key_j = 2;
+    } else if (keypress == '3') {
+      key_i = 1; key_j = 3;
+    } else if (keypress == '4') {
+      key_i = 2; key_j = 1;
+    } else if (keypress == '5') {
+      key_i = 2; key_j = 2;
+    } else if (keypress == '6') {
+      key_i = 2; key_j = 3;
+    } else if (keypress == '7') {
+      key_i = 3; key_j = 1;
+    } else if (keypress == '8') {
+      key_i = 3; key_j = 2;
+    } else if (keypress == '9') {
+      key_i = 3; key_j = 3;
+    } else if (keypress == '0') {
+      key_i = 4; key_j = 2;
+    } else if (keypress == '*') {
+      key_i = 4; key_j = 1;
+    } else if (keypress == '#') {
+      key_i = 4; key_j = 3;
+    } else if (keypress == 'A') {
+      key_i = 1; key_j = 4;
+    } else if (keypress == 'B') {
+      key_i = 2; key_j = 4;
+    } else if (keypress == 'C') {
+      key_i = 3; key_j = 4;
+    } else if (keypress == 'D') {
+      key_i = 4; key_j = 4;
+    }
   }
 
   // Run the code associated with the particular command
+  auto mode_name = std::string();
+  auto mode_size = 2;
   switch (mode) {
     case '1': // Reserved for Light Mode
     case '8': // Reserved for Function Mode
     case '9': // Reserved for Function Mode
     case '*': // Reserved for Funciton Mode
-    default:
       // Set the mode message
-      if(newmode){
-        displayUpdate("Hold Bottom Right\nfor Main Menu");
-        newmode = false;
-      }
+      mode_name = "Press Bottom Right\nfor Main Menu";
       runDefaultAnimations();
       break;
 
-    case 'D':
-      {
-        // Set the mode message
-        if(newmode){
-          displayUpdate("Menu");
-          newmode = false;
-        }
-  
-        // Swap modes to whatever the last key pressed was
-        char key = getLastKey();
-        if(key != NO_KEY){
-          mode = key;
-          newmode = true;
-        }
-  
-        //Default Animation Loop
-        if (animations.IsAnimating()) {
-          // The normal loop just needs these two to run the active animations
-          animations.UpdateAnimations();
-          strip.Show();
-        } else {
-          // No animation runnning, start some
-          FadeInFadeOutRinseRepeat(0.05f); // 0.0 = black, 0.25 is normal, 0.5 is bright
-        }
+      //Default Animation Loop
+      if (animations.IsAnimating()) {
+        // The normal loop just needs these two to run the active animations
+        animations.UpdateAnimations();
+        strip.Show();
+      } else {
+        // No animation runnning, start some
+        FadeInFadeOutRinseRepeat(.05f); // 0.0 = black, 0.25 is normal, 0.5 is bright
       }
+      break;
+
+    case 'D':
+      // Set the mode message
+      mode_name = "Menu";
+      mode_size = 4;
+
+      //Default Animation Loop
+      if (animations.IsAnimating()) {
+        // The normal loop just needs these two to run the active animations
+        animations.UpdateAnimations();
+        strip.Show();
+      } else {
+        // No animation runnning, start some
+        FadeInFadeOutRinseRepeat(0.05f); // 0.0 = black, 0.25 is normal, 0.5 is bright
+      }
+
       break;
 
     //Light modes:
@@ -141,10 +182,7 @@ void loop(void) {
     //4, 5, 6, B
     case '2':
       // Set the mode message
-      if(newmode){
-        displayUpdate("Bright Rainbow");
-        newmode = false;
-      }
+      mode_name = "Bright Rainbow";
 
       //Default Animation Loop
       if (animations.IsAnimating()) {
@@ -159,33 +197,25 @@ void loop(void) {
 
     case 'B': {
       // Set the mode message
-      if(newmode){
-        displayUpdate("Pixel Picker");
-        newmode = false;
-      }
+      mode_name = "Pixel Picker";
 
-      if (keys->getState('D') != HOLD) {
+      if (newpress) {
         // Turn off any animations
         animations.StopAnimation(0);
         delay(1);
 
-        // Get a copy of the keymap
-        uint16_t map = 0;
-        for(uint8_t i = 0; i < 4; i++){
-          map |= ((keys->bitMap[i] & 0x0F) << (i * 4));
-        }
+        // Set what it means to be an on and off pixel
+        auto on = HslColor(120.0 / 360.0, 1.0, 0.5);
+        auto off = HslColor(240.0 / 360.0, 1.0, 0.05);
 
-        // Determine if a pixel needs to be on or off
-        for(uint8_t i = 0; i < 16; i++){
-          if((map >> i) & 0x01){
-            // Key is down
-            strip.SetPixelColor(i, COLOR_GREEN);
-          }
-          else{
-            strip.SetPixelColor(i, COLOR_BLUE);
+        // Loop over the pixels
+        for (auto i = uint(1); i <= 4; i++) {
+          for (auto j = uint(1); j <= 4; j++) {
+            auto color = (key_i == i && key_j == j) ? on : off;
+            strip.SetPixelColor(ijtop(i, j), color);
           }
         }
-        
+        delay(1);
         strip.Show();
       }
       break;
@@ -193,11 +223,9 @@ void loop(void) {
 
     case 'A':
       // Set the mode message
-      if (newmode){
-        displayUpdate("Connection Machine");
+      mode_name = "Connection Machine";
+      if (newmode)
         animations.StopAnimation(0);
-        newmode = false;
-      }
       //Connection Machine animation
       if (animations.IsAnimating()) {
         animations.UpdateAnimations();
@@ -209,12 +237,10 @@ void loop(void) {
 
     case '4':
       // Set the mode message
-      if (newmode){
-        displayUpdate("Random Mode");
+      mode_name = "Random Mode";
+      if (newmode)
         animations.StopAnimation(0);
-        newmode = false;
-      }
-   
+      //Connection Machine animation
       if (animations.IsAnimating()) {
         animations.UpdateAnimations();
         strip.Show();
@@ -225,12 +251,10 @@ void loop(void) {
 
     case '5':
       // Set the mode message
-      if (newmode){
-        displayUpdate("Light Walk Mode");
+      mode_name = "Light Walk Mode";
+      if (newmode)
         animations.StopAnimation(0);
-        newmode = false;
-      }
-        
+      //Connection Machine animation
       if (animations.IsAnimating()) {
         animations.UpdateAnimations();
         strip.Show();
@@ -241,12 +265,10 @@ void loop(void) {
 
     case '3':
       // Set the mode message
-      if (newmode){
-        displayUpdate("Party Mode");
+      mode_name = "Party Mode";
+      if (newmode)
         animations.StopAnimation(0);
-        newmode = false;
-      }
-        
+      //Connection Machine animation
       if (animations.IsAnimating()) {
         animations.UpdateAnimations();
         strip.Show();
@@ -255,34 +277,34 @@ void loop(void) {
       }
       break;
 
+
+    // Function Modes:
+    // 7, 8, 9, C
+    // *, #
+
+
     case '6':
       // Set the mode message
+      mode_name = "Color Waves";
       if (newmode) {
-        displayUpdate("Color Waves");
         animations.StopAnimation(0);
-        newmode = false;
       } else {
         ColorWaves(.1);
       }
       break;
 
     case '#':
-      // BLE Scanning project
-
+      // Reserving for BLE Scanning project
+      // Set the mode message
+      mode_name = "BLE Scanning";
       if (newmode) {
-        displayUpdate("BLE Scanning");
-        newmode = false;
-        
         int bleResults[3];
-        
         oled->clearDisplay();
         oled->setCursor(0, 0);
         oled->setTextSize(2);
         oled->println("Scanning..");
         oled->display();
-        
         ble_scan_dczia(bleResults);
-        
         oled->clearDisplay();
         oled->setTextSize(1);
         oled->setCursor(0, 0);
@@ -296,6 +318,7 @@ void loop(void) {
         oled->print("DCZia Badges: ");
         oled->print(bleResults[1]);
         oled->display();
+        newmode = false;
       }
       runDefaultAnimations();
       break;
@@ -304,11 +327,13 @@ void loop(void) {
       oled_displaytest(oled);
       // go back to menu
       mode = 'D';
+      mode_name = "Menu";
+      keypress = 'D';
       break;
 
     case '0':
       // Credits
-      if (newmode) {
+      if (newmode == true) {
         oled_displayCredits(oled);
         //Put it back on the main menu...
         mode = 'D';
@@ -318,34 +343,24 @@ void loop(void) {
 
   }
 
-}
-
-/**
- * Get the last key pressed
- */
-char getLastKey(void){
-  char retKey = lastKey;
-  lastKey = NO_KEY;
-  return retKey;
-}
-
-/**
- * Update the OLED screen
- */
-void displayUpdate(std::string message){
+  // Set the LED message
+  if (newmode) {
     oled->clearDisplay();
     oled->setCursor(0, 0);
     oled->setTextSize(2);
     oled->println(" -DCZia26-");
     oled->setTextSize(1);
-    oled->println(message.c_str());
+    oled->println(mode_name.c_str());
     oled->display();
+  }
+
+  // At this point, the mode has already run, so we're no longer in a new mode
+  newmode = false;
+  newpress = false;
 }
 
-/**
- * Run the default animation - low intensity rainbow
- */
-void runDefaultAnimations(void){
+//Low Rainbow default mode
+void runDefaultAnimations(void) {
   //Default Animation Loop
   if (animations.IsAnimating()) {
     // The normal loop just needs these two to run the active animations

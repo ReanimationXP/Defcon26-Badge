@@ -2,6 +2,9 @@
 #include "dczia26_sd.h"
 #include "sys/time.h"
 
+RTC_DATA_ATTR static time_t last;        // remember last boot in RTC Memory
+RTC_DATA_ATTR static uint32_t bootcount; // remember number of boots in RTC Memory
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -11,9 +14,8 @@ extern "C" {
 }
 #endif
 
-RTC_DATA_ATTR static time_t last;        // remember last boot in RTC Memory
-RTC_DATA_ATTR static uint32_t bootcount; // remember number of boots in RTC Memory
 BLEAdvertising *pAdvertising;
+struct timeval now;
 
 int dc26Badges;
 int dcZiaBadges;
@@ -51,11 +53,13 @@ void setBeacon() {
 }
 
 void ble_setup() {
-
-  struct timeval now;
+  Serial.begin(115200);
   gettimeofday(&now, NULL);
-  Serial.printf("start ESP32 %d\r\n", bootcount++);
-  Serial.printf("deep sleep (%lds since last reset, %lds since last boot)\r\n", now.tv_sec, now.tv_sec-last);
+
+  Serial.printf("start ESP32 %d\n",bootcount++);
+
+  Serial.printf("deep sleep (%lds since last reset, %lds since last boot)\n",now.tv_sec,now.tv_sec-last);
+
   last = now.tv_sec;
   
   // Create the BLE Device
@@ -79,13 +83,13 @@ void ble_setup() {
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     void onResult(BLEAdvertisedDevice advertisedDevice) {
-      Serial.printf("Advertised Device: %s \r\n", advertisedDevice.toString().c_str());
+      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
       SDRecordBLE(advertisedDevice.toString().c_str());
       if(advertisedDevice.getAppearance() == APPEARANCE_DC26) {
-        Serial.printf("*** DC26!!\r\n");
+        Serial.printf("*** DC26!!\n");
         dc26Badges = dc26Badges + 1;
         if(advertisedDevice.getName() == "DCZia26") {
-          Serial.printf("*** DCZia!!\r\n");
+          Serial.printf("*** DCZia!!\n");
           dcZiaBadges = dcZiaBadges + 1;
         }
       }
